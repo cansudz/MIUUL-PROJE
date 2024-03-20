@@ -1,0 +1,365 @@
+import pandas as pd
+
+dfCustomer = pd.read_csv('datasets/olist_customers_dataset.csv')
+dfGeoLocation = pd.read_csv('datasets/olist_geolocation_dataset.csv')
+dfOrderItem = pd.read_csv('datasets/olist_order_items_dataset.csv')
+dfOrderPayment = pd.read_csv('datasets/olist_order_payments_dataset.csv')
+dfOrderReviews = pd.read_csv('datasets/olist_order_reviews_dataset.csv')
+dfOrdersDataset = pd.read_csv('datasets/olist_orders_dataset.csv')
+dfProducts = pd.read_csv('datasets/olist_products_dataset.csv')
+dfSeller = pd.read_csv('datasets/olist_sellers_dataset.csv')
+dfProductCategory = pd.read_csv('datasets/product_category_name_translation.csv')
+
+pd.set_option('display.max_columns' , 10)
+
+dfCustomer.head()
+dfCustomer.shape
+
+print("***")
+
+dfGeoLocation.head()
+dfGeoLocation.shape
+
+print("***")
+
+dfOrderItem.head()
+dfOrderItem.shape
+
+print("***")
+
+dfOrderReviews.head()
+dfOrderReviews.shape
+dfOrderReviews.value_counts()
+
+print("***")
+
+dfOrderPayment.head()
+dfOrderPayment.shape
+
+print("***")
+
+dfOrderReviews.head()
+dfOrderReviews.shape
+
+print("***")
+
+dfOrdersDataset.head()
+dfOrdersDataset.shape
+
+print("***")
+
+dfProducts.head()
+dfProducts.shape
+
+print("***")
+
+dfSeller.head()
+dfSeller.shape
+
+
+print("***")
+
+dfProductCategory.head()
+dfProductCategory.shape
+
+
+
+######################################
+# 1. Genel Resim
+######################################
+
+def check_df(dataframe):
+    print("##################### Shape #####################")
+    print(dataframe.shape)
+    print("##################### Types #####################")
+    print(dataframe.dtypes)
+    print("##################### Head #####################")
+    print(dataframe.head(3))
+    print("##################### Tail #####################")
+    print(dataframe.tail(3))
+    print("##################### NA #####################")
+    print(dataframe.isnull().sum())
+    print("##################### Quantiles #####################")
+    numeric_columns = dataframe.select_dtypes(include=['int64', 'float64']).columns
+    if not numeric_columns.empty:
+        print(dataframe[numeric_columns].quantile([0, 0.05, 0.50, 0.95, 0.99, 1]).T)
+    else:
+        print("No numeric columns to calculate quantiles.")
+
+
+dfCustomer = pd.read_csv('datasets/olist_customers_dataset.csv')
+dfGeoLocation = pd.read_csv('datasets/olist_geolocation_dataset.csv')
+dfOrderItem = pd.read_csv('datasets/olist_order_items_dataset.csv')
+dfOrderPayment = pd.read_csv('datasets/olist_order_payments_dataset.csv')
+dfOrderReviews = pd.read_csv('datasets/olist_order_reviews_dataset.csv')
+dfOrdersDataset = pd.read_csv('datasets/olist_orders_dataset.csv')
+dfProducts = pd.read_csv('datasets/olist_products_dataset.csv')
+dfSeller = pd.read_csv('datasets/olist_sellers_dataset.csv')
+dfProductCategory = pd.read_csv('datasets/product_category_name_translation.csv')
+
+pd.set_option('display.max_columns', 10)
+
+check_df(dfCustomer)
+check_df(dfGeoLocation)
+check_df(dfOrderItem)
+check_df(dfOrderPayment)
+check_df(dfOrderReviews)
+check_df(dfOrdersDataset)
+check_df(dfProducts)
+check_df(dfSeller)
+check_df(dfProductCategory)
+
+
+##################################
+# NUMERİK VE KATEGORİK DEĞİŞKENLERİN YAKALANMASI
+##################################
+
+import pandas as pd
+
+def grab_col_names(dataframe, cat_th=10, car_th=20):
+    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]
+
+    num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and
+                   dataframe[col].dtypes != "O"]
+
+    cat_but_car = [col for col in dataframe.columns if dataframe[col].nunique() > car_th and
+                   dataframe[col].dtypes == "O"]
+
+    cat_cols = cat_cols + num_but_cat
+    cat_cols = [col for col in cat_cols if col not in cat_but_car]
+
+    num_cols = [col for col in dataframe.columns if dataframe[col].dtypes != "O"]
+    num_cols = [col for col in num_cols if col not in num_but_cat]
+
+    print(f"Observations: {dataframe.shape[0]}")
+    print(f"Variables: {dataframe.shape[1]}")
+    print(f'cat_cols: {len(cat_cols)}')
+    print(f'num_cols: {len(num_cols)}')
+    print(f'cat_but_car: {len(cat_but_car)}')
+    print(f'num_but_cat: {len(num_but_cat)}')
+
+    # cat_cols + num_cols + cat_but_car = değişken sayısı.
+    # num_but_cat cat_cols'un içerisinde zaten.
+    # dolayısıyla tüm şu 3 liste ile tüm değişkenler seçilmiş olacaktır: cat_cols + num_cols + cat_but_car
+    # num_but_cat sadece raporlama için verilmiştir.
+
+    return cat_cols, cat_but_car, num_cols
+
+
+# Read your DataFrame (assuming it's named df)
+dfCustomer = pd.read_csv('datasets/olist_customers_dataset.csv')
+dfGeoLocation = pd.read_csv('datasets/olist_geolocation_dataset.csv')
+dfOrderItem = pd.read_csv('datasets/olist_order_items_dataset.csv')
+dfOrderPayment = pd.read_csv('datasets/olist_order_payments_dataset.csv')
+dfOrderReviews = pd.read_csv('datasets/olist_order_reviews_dataset.csv')
+dfOrdersDataset = pd.read_csv('datasets/olist_orders_dataset.csv')
+dfProducts = pd.read_csv('datasets/olist_products_dataset.csv')
+dfSeller = pd.read_csv('datasets/olist_sellers_dataset.csv')
+dfProductCategory = pd.read_csv('datasets/product_category_name_translation.csv')
+
+# Apply the grab_col_names function to each DataFrame
+cat_cols, cat_but_car, num_cols = grab_col_names(dfCustomer)
+print("\nCustomer DataFrame:")
+print("Categorical Columns:", cat_cols)
+print("Categorical but Cardinal Columns:", cat_but_car)
+print("Numerical Columns:", num_cols)
+
+cat_cols, cat_but_car, num_cols = grab_col_names(dfGeoLocation)
+print("\nGeoLocation DataFrame:")
+print("Categorical Columns:", cat_cols)
+print("Categorical but Cardinal Columns:", cat_but_car)
+print("Numerical Columns:", num_cols)
+
+# Repeat the same for other DataFrames
+# ...
+
+# You can apply the same for other DataFrames
+
+
+######################################
+# 2. Kategorik Değişken Analizi (Analysis of Categorical Variables)
+######################################
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def grab_col_names(dataframe, cat_th=10, car_th=20):
+    cat_cols = [col for col in dataframe.columns if dataframe[col].dtypes == "O"]
+
+    num_but_cat = [col for col in dataframe.columns if dataframe[col].nunique() < cat_th and
+                   dataframe[col].dtypes != "O"]
+
+    cat_but_car = [col for col in dataframe.columns if dataframe[col].nunique() > car_th and
+                   dataframe[col].dtypes == "O"]
+
+    cat_cols = cat_cols + num_but_cat
+    cat_cols = [col for col in cat_cols if col not in cat_but_car]
+
+    num_cols = [col for col in dataframe.columns if dataframe[col].dtypes != "O"]
+    num_cols = [col for col in num_cols if col not in num_but_cat]
+
+    print(f"Observations: {dataframe.shape[0]}")
+    print(f"Variables: {dataframe.shape[1]}")
+    print(f'cat_cols: {len(cat_cols)}')
+    print(f'num_cols: {len(num_cols)}')
+    print(f'cat_but_car: {len(cat_but_car)}')
+    print(f'num_but_cat: {len(num_but_cat)}')
+
+    return cat_cols, cat_but_car, num_cols
+
+def cat_summary(dataframe, col_name, plot=False):
+    print(pd.DataFrame({col_name: dataframe[col_name].value_counts(),
+                        "Ratio": 100 * dataframe[col_name].value_counts() / len(dataframe)}))
+
+    if plot:
+        sns.countplot(x=dataframe[col_name], data=dataframe)
+        plt.show()
+
+# Apply grab_col_names function to each DataFrame
+cat_cols_customer, cat_but_car_customer, num_cols_customer = grab_col_names(dfCustomer)
+cat_cols_geolocation, cat_but_car_geolocation, num_cols_geolocation = grab_col_names(dfGeoLocation)
+cat_cols_order_item, cat_but_car_order_item, num_cols_order_item = grab_col_names(dfOrderItem)
+cat_cols_order_payment, cat_but_car_order_payment, num_cols_order_payment = grab_col_names(dfOrderPayment)
+cat_cols_order_reviews, cat_but_car_order_reviews, num_cols_order_reviews = grab_col_names(dfOrderReviews)
+cat_cols_orders_dataset, cat_but_car_orders_dataset, num_cols_orders_dataset = grab_col_names(dfOrdersDataset)
+cat_cols_products, cat_but_car_products, num_cols_products = grab_col_names(dfProducts)
+cat_cols_seller, cat_but_car_seller, num_cols_seller = grab_col_names(dfSeller)
+cat_cols_product_category, cat_but_car_product_category, num_cols_product_category = grab_col_names(dfProductCategory)
+
+# Apply cat_summary function to each categorical column in each DataFrame
+for col in cat_cols_customer:
+    cat_summary(dfCustomer, col)
+
+for col in cat_cols_geolocation:
+    cat_summary(dfGeoLocation, col)
+
+for col in cat_cols_order_item:
+    cat_summary(dfOrderItem, col)
+
+for col in cat_cols_order_payment:
+    cat_summary(dfOrderPayment, col)
+
+for col in cat_cols_order_reviews:
+    cat_summary(dfOrderReviews, col)
+
+for col in cat_cols_orders_dataset:
+    cat_summary(dfOrdersDataset, col)
+
+for col in cat_cols_products:
+    cat_summary(dfProducts, col)
+
+for col in cat_cols_seller:
+    cat_summary(dfSeller, col)
+
+for col in cat_cols_product_category:
+    cat_summary(dfProductCategory, col)
+
+
+
+######################################
+# 3. Sayısal Değişken Analizi (Analysis of Numerical Variables)
+######################################
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def num_summary(dataframe, numerical_col, plot=False):
+    quantiles = [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 0.99]
+    print(dataframe[numerical_col].describe(quantiles).T)
+
+    if plot:
+        dataframe[numerical_col].hist(bins=50)
+        plt.xlabel(numerical_col)
+        plt.title(numerical_col)
+        plt.show()
+
+    print("#####################################")
+
+# Applying num_summary function to numerical columns in each DataFrame
+for col in num_cols_customer:
+    num_summary(dfCustomer, col, True)
+
+for col in num_cols_geolocation:
+    num_summary(dfGeoLocation, col, True)
+
+for col in num_cols_order_item:
+    num_summary(dfOrderItem, col, True)
+
+for col in num_cols_order_payment:
+    num_summary(dfOrderPayment, col, True)
+
+for col in num_cols_order_reviews:
+    num_summary(dfOrderReviews, col, True)
+
+for col in num_cols_orders_dataset:
+    num_summary(dfOrdersDataset, col, True)
+
+for col in num_cols_products:
+    num_summary(dfProducts, col, True)
+
+for col in num_cols_seller:
+    num_summary(dfSeller, col, True)
+
+# Note: I didn't include num_cols_product_category since it was not defined in your previous code.
+
+
+
+
+
+
+######################################    HEDEF DEGISKEN?
+# 4. Hedef Değişken Analizi (Analysis of Target Variable)
+######################################
+
+def target_summary_with_cat(dataframe, target, categorical_col):
+    print(pd.DataFrame({"TARGET_MEAN": dataframe.groupby(categorical_col)[target].mean()}), end="\n\n\n")
+
+
+for col in cat_cols:
+    target_summary_with_cat(df,"SalePrice",col)
+
+
+# Bağımlı değişkenin incelenmesi
+df["SalePrice"].hist(bins=100)
+plt.show()
+
+# Bağımlı değişkenin logaritmasının incelenmesi
+np.log1p(df['SalePrice']).hist(bins=50)
+plt.show()
+
+
+
+
+######################################
+# 5. Korelasyon Analizi (Analysis of Correlation)
+######################################
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Compute correlation matrix between numerical columns
+corr = dfCustomer[num_cols].corr()
+
+# Visualize correlation matrix using a heatmap
+sns.set(rc={'figure.figsize': (12, 12)})
+sns.heatmap(corr, cmap="RdBu")
+plt.show()
+
+# Function to identify highly correlated columns
+def high_correlated_cols(dataframe, plot=False, corr_th=0.70):
+    corr = dataframe.corr()  # Define corr here
+    cor_matrix = corr.abs()
+    upper_triangle_matrix = cor_matrix.where(np.triu(np.ones(cor_matrix.shape), k=1).astype(np.bool))
+    drop_list = [col for col in upper_triangle_matrix.columns if any(upper_triangle_matrix[col] > corr_th)]
+    if plot:
+        sns.set(rc={'figure.figsize': (15, 15)})
+        sns.heatmap(corr, cmap="RdBu")
+        plt.show()
+    return drop_list
+
+# Applying high_correlated_cols function to numerical columns
+high_correlated_cols(dfCustomer[num_cols], plot=True)
+
+
