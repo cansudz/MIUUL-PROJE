@@ -146,7 +146,7 @@ def grab_col_names(dataframe, cat_th=10, car_th=20):
     return cat_cols, cat_but_car, num_cols
 
 
-# Read your DataFrame (assuming it's named df)
+# DataFrame okuma
 dfCustomer = pd.read_csv('datasets/olist_customers_dataset.csv')
 dfGeoLocation = pd.read_csv('datasets/olist_geolocation_dataset.csv')
 dfOrderItem = pd.read_csv('datasets/olist_order_items_dataset.csv')
@@ -170,10 +170,8 @@ print("Categorical Columns:", cat_cols)
 print("Categorical but Cardinal Columns:", cat_but_car)
 print("Numerical Columns:", num_cols)
 
-# Repeat the same for other DataFrames
-# ...
+# bütün dataframelere uygula bunu
 
-# You can apply the same for other DataFrames
 
 
 ######################################
@@ -301,7 +299,7 @@ for col in num_cols_products:
 for col in num_cols_seller:
     num_summary(dfSeller, col, True)
 
-# Note: I didn't include num_cols_product_category since it was not defined in your previous code.
+
 
 
 
@@ -312,21 +310,14 @@ for col in num_cols_seller:
 # 4. Hedef Değişken Analizi (Analysis of Target Variable)
 ######################################
 
-def target_summary_with_cat(dataframe, target, categorical_col):
-    print(pd.DataFrame({"TARGET_MEAN": dataframe.groupby(categorical_col)[target].mean()}), end="\n\n\n")
 
-
-for col in cat_cols:
-    target_summary_with_cat(df,"SalePrice",col)
 
 
 # Bağımlı değişkenin incelenmesi
-df["SalePrice"].hist(bins=100)
-plt.show()
+
 
 # Bağımlı değişkenin logaritmasının incelenmesi
-np.log1p(df['SalePrice']).hist(bins=50)
-plt.show()
+
 
 
 
@@ -335,31 +326,6 @@ plt.show()
 # 5. Korelasyon Analizi (Analysis of Correlation)
 ######################################
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 
-# Compute correlation matrix between numerical columns
-corr = dfCustomer[num_cols].corr()
-
-# Visualize correlation matrix using a heatmap
-sns.set(rc={'figure.figsize': (12, 12)})
-sns.heatmap(corr, cmap="RdBu")
-plt.show()
-
-# Function to identify highly correlated columns
-def high_correlated_cols(dataframe, plot=False, corr_th=0.70):
-    corr = dataframe.corr()  # Define corr here
-    cor_matrix = corr.abs()
-    upper_triangle_matrix = cor_matrix.where(np.triu(np.ones(cor_matrix.shape), k=1).astype(np.bool))
-    drop_list = [col for col in upper_triangle_matrix.columns if any(upper_triangle_matrix[col] > corr_th)]
-    if plot:
-        sns.set(rc={'figure.figsize': (15, 15)})
-        sns.heatmap(corr, cmap="RdBu")
-        plt.show()
-    return drop_list
-
-# Applying high_correlated_cols function to numerical columns
-high_correlated_cols(dfCustomer[num_cols], plot=True)
 
 
