@@ -1,0 +1,189 @@
+VERİ ÖN İŞLEME
+
+import numpy as np
+import pandas as pd
+
+
+import os  # os modülünü içe aktarır, bu modül dosya ve dizin işlemleri için kullanılır.
+
+
+os.chdir('C:\\Users\\Renda\\PycharmProjects\\pythonProject3\\datasets')
+
+
+pd.set_option('display.max_columns', 10)
+
+
+customers = pd.read_csv("olist_customers_dataset.csv")
+customers.head()
+
+
+
+orders = pd.read_csv("olist_orders_dataset.csv")
+orders.head()
+
+
+items = pd.read_csv("olist_order_items_dataset.csv")
+items.head()
+
+
+
+payments = pd.read_csv("olist_order_payments_dataset.csv")
+payments.head()
+
+
+
+reviews = pd.read_csv("olist_order_reviews_dataset.csv")
+reviews.head()
+
+
+
+geolocations = pd.read_csv("olist_geolocation_dataset.csv")
+geolocations.head()
+
+
+
+sellers = pd.read_csv("olist_sellers_dataset.csv")
+sellers.head()
+
+
+
+products = pd.read_csv("olist_products_dataset.csv")
+products.head()
+
+
+
+
+name_translations = pd.read_csv("product_category_name_translation.csv")
+name_translations.head()
+
+
+
+
+#TUM VERI TIPLERININ BIRLEŞTIRILMESI COGRAFI KONUM VERILERI HARIC
+
+# Veri kümelerini birleştirirken ortak anahtarları kullanarak verileri birleştirir.
+data = customers.merge(orders, on='customer_id') \
+                .merge(items, on='order_id') \
+                .merge(payments, on='order_id') \
+                .merge(reviews, on='order_id') \
+                .merge(products, on='product_id') \
+                .merge(name_translations, on='product_category_name') \
+                .merge(sellers, on='seller_id')
+# Oluşturulan birleştirilmiş veri kümesinin ilk 5 satırını görüntüler.
+data.head()
+
+#tekrarlanan Sipariş Kimlikleri (OrderIDs) var. Bunun nedeni aşağıdakilerden biri veya her ikisinin bir kombinasyonu olabilir:
+# Her sipariş birden fazla sipariş öğesi içerebilir.
+#Her sipariş birden fazla ödeme kaynağı aracılığıyla ödenebilir.
+
+
+
+
+#VERI GENEL BAKISI
+
+data.info()
+
+
+#BAZI VERI TIPLERININ YENIDEN ATANMASI
+
+for feature in ['customer_zip_code_prefix', 'seller_zip_code_prefix']:
+    data[feature] = data[feature].astype('object')
+# Veri çerçevesindeki 'customer_zip_code_prefix' ve 'seller_zip_code_prefix' sütunlarının veri türünü 'object' olarak değiştirir.
+# Bu sütunlar, posta kodlarını temsil eder ve sayısal değerler yerine kategorik değerler olarak ele alınmalıdır.
+
+#
+for feature in ['order_purchase_timestamp', 'order_approved_at', 'order_delivered_carrier_date',
+                'order_delivered_customer_date', 'order_estimated_delivery_date', 'shipping_limit_date',
+                'review_creation_date', 'review_answer_timestamp']:
+    data[feature] = pd.to_datetime(data[feature], errors = 'raise', utc = False)
+# Veri çerçevesindeki belirli tarih saat sütunlarının veri türünü 'datetime64' olarak değiştirir.
+# Tarih ve saat sütunları, tarih ve saat bilgilerini içerdiğinden, veri türü 'datetime64' olarak ayarlanmalıdır.
+
+
+#OZELLIK ADLARINI VE KARŞILIK GELEN VERİ TİPLERİNİ YENİDEN KONTROL ETME:
+
+data.dtypes
+
+
+#VERI CERCEVESININ SEKLINI KONTROL ETME
+
+data.shape
+
+
+#EKSIK DEGERLERI KONTROL ETME
+
+Total = data.isnull().sum().sort_values(ascending=False) # Her özellikteki eksik değerlerin toplam sayısını hesaplar ve sıralar
+Percent = (data.isnull().sum() * 100 / data.isnull().count()).sort_values(ascending=False) # Her özellikteki eksik değerlerin yüzdesini hesaplar ve sıralar
+missing_data = pd.concat([Total, Percent], axis=1, keys=['Toplam', 'Eksik Değerlerin Yüzdesi']) # Toplam ve yüzde cinsinden eksik değerleri birleştirir
+
+missing_data
+
+#Bu kod, her bir özellikteki eksik değerlerin toplam sayısını ve yüzdesini hesaplar ve bu bilgileri bir veri çerçevesi olarak görüntüler.
+#En önemli özelliklerin çoğunda verinin %100'ü mevcut ve eksik veriler genellikle müşterilerin satın aldıkları ürünler için inceleme yapmayı tercih etmemelerinden ve bazı başarısız teslimatlardan kaynaklanmaktadır.
+
+
+
+
+
+#EKSIK DEGERLERIN KALDIRILMASI
+
+#Yüksek yüzdeye sahip eksik değerlere sahip özelliklerin çıkarılması:
+
+data.drop(['review_comment_title', 'review_comment_message'], axis = 1, inplace = True)
+# Veri çerçevesinden 'review_comment_title' ve 'review_comment_message' sütunlarını çıkarır.
+
+
+
+#Düşük yüzdeye sahip eksik değerlere sahip özellikler için eksik değer içeren satırların kaldırılması:
+
+data.dropna(axis = 0, inplace = True)
+# Veri çerçevesindeki eksik değerlere sahip satırları kaldırır.
+
+
+
+
+#EKSIK DEGERLERIN YENIDEN KONTROL EDILMESI
+
+# Bu kod, eksik değerlerin güncellenmiş toplam sayısını ve yüzdesini hesaplar ve bu bilgileri bir veri çerçevesi olarak görüntüler.
+Total = data.isnull().sum().sort_values(ascending=False) # Güncellenmiş eksik değerlerin toplam sayısını hesaplar ve sıralar
+Percent = (data.isnull().sum() * 100 / data.isnull().count()).sort_values(ascending=False) # Güncellenmiş eksik değerlerin yüzdesini hesaplar ve sıralar
+missing_data = pd.concat([Total, Percent], axis=1, keys=['Toplam', 'Eksik Değerlerin Yüzdesi']) # Toplam ve yüzde cinsinden eksik değerleri birleştirir
+missing_data
+
+#Tum null degerler ortadan kaldırıldı
+
+
+
+
+#VERILERIN YENIDEN KONTROLU
+
+data.shape
+
+
+
+
+
+#VERININ SAYISAL OZELLIKLERININ OZETI
+
+# Tarih saat sütunlarını al
+date_columns = data.select_dtypes(include=['datetime64']).columns
+
+# Tarih saat sütunlarını tanımla
+date_description = data[date_columns].describe()
+
+# Diğer sütunlarla birleştir
+numeric_description = data.describe()
+combined_description = pd.concat([numeric_description, date_description], axis=0)
+
+# Transpozunu al
+combined_description = combined_description.T
+
+# Sonucu görüntüle
+print(combined_description)
+
+
+
+#VERININ KATEGORIK OZELLIKLERININ OZETI
+
+data.describe(include = 'object').T
+
