@@ -1,0 +1,278 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+import warnings
+
+from pandas.core.interchange import dataframe
+
+warnings.filterwarnings('ignore')
+
+import os
+
+for dirname, _, filenames in os.walk('datasets/'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 500)
+
+customers = pd.read_csv('datasets/olist_customers_dataset.csv')
+geolocation = pd.read_csv('datasets/olist_geolocation_dataset.csv')
+orders = pd.read_csv('datasets/olist_orders_dataset.csv')
+items = pd.read_csv('datasets/olist_order_items_dataset.csv')
+payments = pd.read_csv('datasets/olist_order_payments_dataset.csv')
+reviews = pd.read_csv('datasets/olist_order_reviews_dataset.csv')
+products = pd.read_csv('datasets/olist_products_dataset.csv')
+sellers = pd.read_csv('datasets/olist_sellers_dataset.csv')
+name_translations = pd.read_csv('datasets/product_category_name_translation.csv')
+
+#TUM VERI TIPLERININ BIRLEŞTIRILMESI COGRAFI KONUM VERILERI HARIC
+
+# Veri kümelerini birleştirirken ortak anahtarları kullanarak verileri birleştirir.
+data = customers.merge(orders, on='customer_id') \
+                .merge(items, on='order_id') \
+                .merge(payments, on='order_id') \
+                .merge(reviews, on='order_id') \
+                .merge(products, on='product_id') \
+                .merge(name_translations, on='product_category_name') \
+                .merge(sellers, on='seller_id')
+# Oluşturulan birleştirilmiş veri kümesinin ilk 5 satırını görüntüler.
+data.head()
+
+df = data.copy()
+
+df_col = ['order_id', 'customer_id', 'order_status', 'order_purchase_timestamp', 'order_approved_at',
+          'order_delivered_carrier_date', 'order_delivered_customer_date', 'order_estimated_delivery_date',
+          'order_item_id', 'product_id', 'seller_id', 'shipping_limit_date', 'price', 'freight_value',
+          'customer_city', 'customer_state', 'payment_sequential', 'payment_type', 'payment_installments',
+          'payment_value', 'seller_city', 'seller_state', 'product_category_name_english', 'review_score',
+          'review_creation_date', 'review_answer_timestamp']
+
+df = df[df_col]
+
+
+################
+
+def check_df(dataframe, head=5):
+    print("##################### Shape #####################")
+    print(dataframe.shape)
+    print("##################### Types #####################")
+    print(dataframe.dtypes)
+    print("##################### Head #####################")
+    print(dataframe.head(head))
+    print("##################### Tail #####################")
+    print(dataframe.tail(head))
+    print("##################### NA #####################")
+    print(dataframe.isnull().sum())
+    print("##################### Quantiles #####################")
+    print(dataframe.describe([0, 0.05, 0.50, 0.95, 0.99, 1]).T)
+
+
+check_df(df)
+
+
+def datetime_col(dataframe, cols):
+    for col in cols:
+        dataframe[col] = pd.to_datetime(dataframe[col])
+    return dataframe
+
+
+datetime_df = datetime_col(df, ['order_purchase_timestamp', 'order_approved_at', 'order_delivered_carrier_date',
+                                'order_delivered_customer_date', 'order_estimated_delivery_date', 'shipping_limit_date',
+                                'review_creation_date', 'review_answer_timestamp'])
+
+
+def grab_col_names(dataframe, cat_th=10, car_th=20):
+    # cat_cols, cat_but_car
+    cat_cols = [col for col in dataframe.columns if str(dataframe[col].dtypes) in ["category", "object", "bool"]]
+
+    date_cols = [col for col in dataframe.columns if str(dataframe[col].dtypes in ["datetime", "datetime64[ns]"])]
+
+    num_but_cat = [col for col in dataframe.columns if
+                   dataframe[col].nunique() < cat_th and dataframe[col].dtypes in ["int64", "float64"]]
+
+    cat_but_car = [col for col in dataframe.columns if
+                   dataframe[col].nunique() > car_th and str(dataframe[col].dtypes) in ["category", "object"]]
+
+    cat_cols = cat_cols + num_but_cat
+    cat_cols = [col for col in cat_cols if col not in cat_but_car]
+
+    num_cols = [col for col in dataframe.columns if dataframe[col].dtypes in ["int64", "float64"]]
+    num_cols = [col for col in num_cols if col not in cat_cols]
+
+    print(f"Observations: {dataframe.shape[0]}")
+    print(f"Variables: {dataframe.shape[1]}")
+    print(f'cat_cols: {len(cat_cols)}')
+    print(f'num_cols: {len(num_cols)}')
+    print(f'date_cols: {len(date_cols)}')
+    print(f'cat_but_car: {len(cat_but_car)}')
+    print(f'num_but_cat: {len(num_but_cat)}')
+
+    return cat_cols, num_cols, cat_but_car, date_cols
+
+
+cat_cols, num_cols, cat_but_car, date_cols = grab_col_names(df)
+
+exclude_car = ['customer_city', 'customer_state', 'seller_city', 'seller_state', 'product_category_name_english']
+
+cat_cols = cat_cols + exclude_car  ## yararlı olabilecek cardinalite olarak tespit edilen sütunlar kategoriklere dahil edildi
+
+
+def cat_summary(dataframe, col_name):
+    print(pd.DataFrame({col_name: dataframe[col_name].value_counts(),
+                        "Ratio": 100 * dataframe[col_name].value_counts() / len(dataframe)}))
+    print("##########################################")
+
+
+for col in cat_cols:
+    cat_summary(df, col)
+
+
+def num_summary(dataframe, numerical_col, plot=False):
+    quantiles = [0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 0.99]
+    print(dataframe[numerical_col].describe(quantiles).T)
+
+    if plot:
+        dataframe[numerical_col].hist()
+        plt.xlabel(numerical_col)
+        plt.title(numerical_col)
+        plt.show(block=True)
+
+
+for col in num_cols:
+    num_summary(df, col, plot=True)
+
+
+df_cancel = df[df["order_status"] == "canceled"]
+
+df_delivered = df[~(df["order_status"] == "canceled")]
+
+df_delivered = df_delivered.groupby(['order_id', 'customer_id', 'order_status', 'order_purchase_timestamp', 'order_approved_at', 'order_delivered_carrier_date', 'order_delivered_customer_date', 'order_estimated_delivery_date', 'product_id', 'seller_id', 'shipping_limit_date', 'price', 'freight_value', 'customer_city', 'customer_state', 'payment_sequential', 'payment_type', 'payment_installments', 'payment_value', 'seller_city', 'seller_state', 'product_category_name_english', 'review_score',
+       'review_creation_date', 'review_answer_timestamp']).agg({'order_item_id': "max"}).reset_index()
+
+
+
+### order_item: kaç ürün alındığı
+### payment_value: toplam ödene tutar
+### price: birim fiyatı
+### freight_value: birim taşıma ücreti
+
+df_delivered.groupby(["customer_city"]).agg({"payment_value": 'sum'}).sort_values(by="payment_value", ascending=False)
+
+df_delivered["order_purchase_timestamp"] = pd.to_datetime(df_delivered["order_purchase_timestamp"])
+df_delivered["order_purchase_day"] = df_delivered["order_purchase_timestamp"].dt.day
+df_delivered.groupby(["order_purchase_day"]).agg({"order_id": 'count'}).sort_values(by="order_id", ascending=False)
+
+
+df_delivered["order_purchase_hour"] = df_delivered["order_purchase_timestamp"].dt.hour
+df_delivered.groupby(["order_purchase_hour"]).agg({"order_id": 'count'}).sort_values(by="order_id", ascending=False)
+
+
+df_delivered["order_purchase_day_name"] = df_delivered["order_purchase_timestamp"].dt.day_name()
+df_delivered.groupby(["order_purchase_day_name"]).agg({"order_id": 'count'}).sort_values(by="order_id", ascending=False)
+
+
+df_delivered.groupby(["product_category_name_english"]).agg({"order_id": 'count'}).sort_values(by="order_id", ascending=True)
+
+
+df_delivered.groupby(["product_category_name_english"]).agg({"payment_value": 'sum'}).sort_values(by="payment_value", ascending=False)
+
+
+df_delivered.groupby(["product_category_name_english", "review_score"]).agg({"order_id": 'count'}).sort_values(by="order_id", ascending=False)
+
+
+df_delivered["order_delivered_customer_date"] = pd.to_datetime(df_delivered["order_delivered_customer_date"])
+df_delivered["delivery_duration"] = ((df_delivered["order_delivered_customer_date"] - df_delivered["order_purchase_timestamp"]).dt.days) + 1
+df_delivered.groupby(["delivery_duration", "review_score"]).agg({"order_id": 'count'}).sort_values(by="delivery_duration", ascending=False)
+
+##### feature engineering
+
+df_order_payment = df_delivered.groupby(["customer_id", "order_status"]).agg({"order_id": "count", "payment_value": "sum"}).reset_index()
+df_order_payment.rename(columns={'order_id': "order_count", "payment_value": 'payment_value_sum'}, inplace=True)
+df_delivered_1 = df_delivered.merge(df_order_payment, on=["customer_id","order_status"])
+
+df_delivered_1["order_estimated_delivery_date"] = pd.to_datetime(df_delivered_1["order_estimated_delivery_date"])
+df_delivered_1["delivery_time_diff"] = (df_delivered_1["order_delivered_customer_date"] - df_delivered_1["order_estimated_delivery_date"]).dt.days ## 0 dan küçük değerlerde sorun yok, büyükler gecikmiş teslimat
+
+df_delivered_1["order_approved_at"] = pd.to_datetime(df_delivered_1["order_approved_at"])
+df_delivered_1["order_delivered_carrier_date"] = pd.to_datetime(df_delivered_1["order_delivered_carrier_date"])
+df_delivered_1["order_preparation_time"] = (df_delivered_1["order_delivered_carrier_date"] - df_delivered_1["order_approved_at"]).dt.days
+
+
+
+################## RFM ##################
+
+df_delivered_1_user = pd.DataFrame(df_delivered_1['customer_id'].unique(), columns=['customer_id'])
+df_delivered_1_user.rename(columns={'customer_id': 'customer_id'}, inplace=True)
+df_delivered_1_max_purchase = df_delivered_1.groupby('customer_id')['order_purchase_timestamp'].max().reset_index()
+df_delivered_1_max_purchase.rename(columns={'order_purchase_timestamp': 'maxPurchaseDate'}, inplace=True)
+
+
+
+df_delivered_1_max_purchase['maxPurchaseDate'] = pd.to_datetime(df_delivered_1_max_purchase['maxPurchaseDate'])
+df_delivered_1_max_purchase['recency'] = (df_delivered_1_max_purchase['maxPurchaseDate'].max() - df_delivered_1_max_purchase['maxPurchaseDate']).dt.days
+df_delivered_1_user_recency = pd.merge(df_delivered_1_user, df_delivered_1_max_purchase[['customer_id', 'recency']], on='customer_id')
+df_delivered_1_user_recency.recency.describe()
+
+
+sns.set(palette='muted', color_codes=True, style='white')
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.despine(left=True)
+sns.distplot(df_delivered_1_user_recency['recency'], bins=30)
+plt. show()
+
+
+df_frequency = df_delivered_1.groupby('customer_id').order_purchase_timestamp.count().reset_index()
+df_frequency.rename(columns={'order_purchase_timestamp': 'frequency'}, inplace=True)
+
+df_delivered_1_user_recency_frequency = pd.merge(df_delivered_1_user_recency, df_frequency, on='customer_id')
+df_delivered_1_user_recency_frequency.frequency.describe()
+
+df_monetary = df_delivered_1.groupby('customer_id').payment_value.sum().reset_index()
+df_monetary.rename(columns={'payment_value': 'monetary'}, inplace=True)
+
+df_delivered_1_user_recency_frequency_monetary = pd.merge(df_delivered_1_user_recency_frequency, df_monetary, on='customer_id')
+df_delivered_1_user_recency_frequency_monetary.monetary.describe()
+
+
+df_delivered_1_user_recency_frequency_monetary["recency_score"] = pd.qcut(df_delivered_1_user_recency_frequency_monetary['recency'], 5, labels=[5, 4, 3, 2, 1])
+
+# 0-100, 0-20, 20-40, 40-60, 60-80, 80-100
+
+df_delivered_1_user_recency_frequency_monetary["frequency_score"] = pd.qcut(df_delivered_1_user_recency_frequency_monetary['frequency'].rank(method="first"), 5, labels=[1, 2, 3, 4, 5])
+
+df_delivered_1_user_recency_frequency_monetary["monetary_score"] = pd.qcut(df_delivered_1_user_recency_frequency_monetary['monetary'], 5, labels=[1, 2, 3, 4, 5])
+
+df_delivered_1_user_recency_frequency_monetary["RFM_SCORE"] = (df_delivered_1_user_recency_frequency_monetary['recency_score'].astype(str) + df_delivered_1_user_recency_frequency_monetary['frequency_score'].astype(str))
+
+
+seg_map = {
+    r'[1-2][1-2]': 'hibernating',
+    r'[1-2][3-4]': 'at_Risk',
+    r'[1-2]5': 'cant_loose',
+    r'3[1-2]': 'about_to_sleep',
+    r'33': 'need_attention',
+    r'[3-4][4-5]': 'loyal_customers',
+    r'41': 'promising',
+    r'51': 'new_customers',
+    r'[4-5][2-3]': 'potential_loyalists',
+    r'5[4-5]': 'champions'
+}
+
+df_delivered_1_user_recency_frequency_monetary['segment'] = df_delivered_1_user_recency_frequency_monetary['RFM_SCORE'].replace(seg_map, regex=True)
+
+df_delivered_1_user_recency_frequency_monetary[["segment", "recency", "frequency", "monetary"]].groupby("segment").agg(["mean", "count"])
+
+df_delivered_1_user_recency_frequency_monetary[df_delivered_1_user_recency_frequency_monetary["segment"] == "cant_loose"].head()
+df_delivered_1_user_recency_frequency_monetary[df_delivered_1_user_recency_frequency_monetary["segment"] == "cant_loose"].index
+
+new_df = pd.DataFrame()
+new_df["new_customer_id"] = df_delivered_1_user_recency_frequency_monetary[df_delivered_1_user_recency_frequency_monetary["segment"] == "new_customers"].index
+
+new_df["new_customer_id"] = new_df["new_customer_id"].astype(int)
+
+new_df.to_csv("new_customers.csv")
+
+df_delivered_1_user_recency_frequency_monetary.to_csv("rfm.csv")
